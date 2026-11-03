@@ -188,7 +188,7 @@ useEffect(() => {
   return () => conn.disconnect();
 }, [roomId]);
 
-// GOOD: useEffectEvent (experimental) captures latest values automatically
+// GOOD: useEffectEvent (React 19.2+) captures latest values automatically
 const onMsg = useEffectEvent((msg) => {
   onMessage(msg);
 });
@@ -220,7 +220,7 @@ function updateToggle(nextIsOn) {
 }
 ```
 
-### useEffectEvent for latest values (experimental)
+### useEffectEvent for latest values (React 19.2+)
 
 When an effect needs to read the latest value of a prop/state without re-running when it changes, use `useEffectEvent` instead of a ref workaround:
 
@@ -241,7 +241,9 @@ useEffect(() => {
 }, [url]);
 ```
 
-Until `useEffectEvent` is stable, prefer moving logic to event handlers or `useMountEffect`. If neither fits, isolate the ref workaround in a custom hook — never in a component.
+Call the function `useEffectEvent` returns only from inside effects. Never call it during render or pass it to other components.
+
+Before React 19.2, `useEffectEvent` isn't available: prefer moving logic to event handlers or `useMountEffect`. If neither fits, isolate the ref workaround in a custom hook — never in a component.
 
 ### Callback refs for DOM side effects
 

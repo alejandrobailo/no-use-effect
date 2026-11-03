@@ -495,7 +495,7 @@ function ChatRoom({ roomId, onMessage }) {
 
 ## useEffectEvent
 
-`useEffectEvent` is an experimental React API that solves the "latest value in an effect" problem. It wraps non-reactive logic so that it always reads the latest values without being a dependency of the effect.
+`useEffectEvent` (stable since React 19.2) solves the "latest value in an effect" problem. It wraps non-reactive logic so that it always reads the latest values without being a dependency of the effect. Call the function it returns only from inside effects, never during render, and don't pass it to other components.
 
 ### Reading latest callback without refs
 
@@ -554,7 +554,7 @@ function Page({ url }) {
 }
 ```
 
-**Until `useEffectEvent` is stable:** prefer moving logic to event handlers or `useMountEffect`. If neither fits, isolate the ref workaround in a custom hook — never directly in a component.
+**Before React 19.2** (no `useEffectEvent`): prefer moving logic to event handlers or `useMountEffect`. If neither fits, isolate the ref workaround in a custom hook — never directly in a component.
 
 ---
 
