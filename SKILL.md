@@ -1,6 +1,6 @@
 ---
 name: no-use-effect
-description: "ALWAYS ACTIVE. Enforces a strict no-direct-useEffect rule in React and React Native code. Never write useEffect directly — use derived state, event handlers, useMemo, useSyncExternalStore, data-fetching libraries, key-based resets, or useMountEffect instead. Triggers on all React component code: writing new components, editing existing ones, reviewing code, fixing bugs, or refactoring. Also triggers when user mentions useEffect, side effects, data fetching, state sync, or component lifecycle."
+description: "ALWAYS ACTIVE. Enforces a strict no-direct-useEffect rule in React and React Native code. Never write useEffect directly — use derived state, event handlers, useSyncExternalStore, data-fetching libraries or use(), key-based resets, or useMountEffect instead. React Compiler aware: no useMemo/useCallback when the compiler is on. Triggers on all React component code: writing new components, editing existing ones, reviewing code, fixing bugs, or refactoring. Also triggers when user mentions useEffect, side effects, data fetching, state sync, or component lifecycle."
 ---
 
 # No Direct useEffect
@@ -15,6 +15,18 @@ export function useMountEffect(effect: () => void | (() => void)) {
 ```
 
 The only place `useEffect` may appear directly is inside reusable custom hooks (like `useMountEffect` itself, or a `useData` hook when no fetching library is available). Components must never import or call `useEffect`.
+
+## React Compiler Projects
+
+Before reaching for manual memoization, check whether the project compiles with React Compiler: `reactCompiler: true` in `next.config.*`, `babel-plugin-react-compiler` in `package.json`, or project rules that ban `useMemo`/`useCallback`.
+
+When the compiler is on:
+
+- Never write `useMemo` or `useCallback`. The compiler memoizes derived values and functions for you.
+- Derive expensive values inline (Rule 1) and write callback refs as plain functions.
+- Project rules about memoization win over the examples in this skill.
+
+Without the compiler, the `useMemo` and `useCallback` examples below apply as written.
 
 ## The 6 Rules
 
@@ -33,13 +45,19 @@ useEffect(() => {
 const filteredProducts = products.filter((p) => p.inStock);
 ```
 
-For expensive calculations, use `useMemo`:
+For expensive calculations without React Compiler, use `useMemo`:
 
 ```tsx
 const visibleTodos = useMemo(
   () => getFilteredTodos(todos, filter),
   [todos, filter]
 );
+```
+
+With React Compiler, keep it inline. The compiler caches it:
+
+```tsx
+const visibleTodos = getFilteredTodos(todos, filter);
 ```
 
 **Smell test:** You're about to write `useEffect(() => setX(f(y)), [y])` or state that only mirrors other state/props.
@@ -246,6 +264,8 @@ const measuredRef = useCallback((node: HTMLDivElement | null) => {
 return <div ref={measuredRef}>Content</div>;
 ```
 
+With React Compiler, write the callback ref as a plain function (`const measuredRef = (node: HTMLDivElement | null) => { ... }`); the compiler keeps its identity stable. Without the compiler, keep `useCallback`: a new function on every render makes React detach and re-attach the ref, running its cleanup each time.
+
 In React 19+, callback refs support cleanup return values. For earlier versions, store cleanup logic in a ref inside a custom hook.
 
 ### Subscribing to external stores
@@ -297,14 +317,14 @@ function handlePlaceCard(nextCard) {
 
 Before writing any effect, answer these questions:
 
-1. **Can I compute it during render?** -> Derive it inline or `useMemo`
+1. **Can I compute it during render?** -> Derive it inline (`useMemo` only for expensive work, and only without React Compiler)
 2. **Is it triggered by a user action?** -> Event handler
 3. **Am I fetching data?** -> Data-fetching library (React Query, SWR, etc.) or `use()` + Suspense in React 19+
 4. **Am I subscribing to an external store?** -> `useSyncExternalStore`
 5. **Do I need to reset state when a prop changes?** -> `key` prop
 6. **Is it true mount-time external system sync?** -> `useMountEffect`
 7. **Am I using refs to control when/if an effect runs?** -> Remove the refs; move logic to an event handler, derive it, or use `useEffectEvent`
-8. **Do I need a DOM side effect when a node mounts?** -> Callback ref
+8. **Do I need a DOM side effect when a node mounts?** -> Callback ref (a plain function with React Compiler)
 
 If none of the above apply and you still think you need `useEffect`, see [references/patterns.md](references/patterns.md) for detailed examples.
 

@@ -5,7 +5,7 @@ Extended examples for each rule when the SKILL.md summary isn't enough.
 ## Table of Contents
 
 - [Derived State](#derived-state)
-- [Expensive Calculations with useMemo](#expensive-calculations-with-usememo)
+- [Expensive Calculations](#expensive-calculations)
 - [Data Fetching Race Conditions](#data-fetching-race-conditions)
 - [Event Handler Extraction](#event-handler-extraction)
 - [Conditional Mounting](#conditional-mounting)
@@ -57,7 +57,7 @@ const fullName = firstName + ' ' + lastName;
 
 ---
 
-## Expensive Calculations with useMemo
+## Expensive Calculations
 
 ```tsx
 // BAD
@@ -66,14 +66,17 @@ useEffect(() => {
   setVisibleTodos(getFilteredTodos(todos, filter));
 }, [todos, filter]);
 
-// GOOD
+// GOOD (React Compiler): inline, the compiler caches it
+const visibleTodos = getFilteredTodos(todos, filter);
+
+// GOOD (no React Compiler): useMemo
 const visibleTodos = useMemo(
   () => getFilteredTodos(todos, filter),
   [todos, filter]
 );
 ```
 
-**When is a calculation expensive?** Measure with `console.time`. Generally only worth memoizing if >1ms on throttled CPU.
+**When is a calculation expensive?** Measure with `console.time`. Generally only worth memoizing if >1ms on throttled CPU. With React Compiler this question goes away: never add `useMemo` by hand.
 
 ---
 
@@ -617,3 +620,17 @@ return <div ref={chartRef} />;
 ```
 
 **Note:** React 19 supports cleanup return values from callback refs. For earlier versions, store the cleanup in a ref inside a custom hook.
+
+### Callback refs and React Compiler
+
+The `useCallback` wrappers above are for projects without React Compiler. A callback ref with a new identity on every render makes React detach and re-attach it, running its cleanup each time, so it has to be memoized. With React Compiler, write a plain function and let the compiler keep it stable:
+
+```tsx
+// GOOD (React Compiler)
+const chartRef = (node: HTMLDivElement | null) => {
+  if (node === null) return;
+  const chart = new Chart(node, config);
+  return () => chart.destroy();
+};
+return <div ref={chartRef} />;
+```
